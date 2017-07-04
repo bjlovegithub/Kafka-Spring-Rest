@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,12 +16,12 @@ import java.util.concurrent.TimeUnit;
 public class ConsumerController {
 
 	@Autowired
-	private SettableListenableFuture<String> resultFuture;
+    private LinkedBlockingQueue<SettableListenableFuture<String>> queue;
 
 	@RequestMapping(value = "/receive_message", method = RequestMethod.GET)
 	public String processReceiveMessage() {
 		try {
-			return resultFuture.get(60, TimeUnit.SECONDS);
+			return queue.take().get(60, TimeUnit.SECONDS);
 		}
 		catch (Exception e) {
 			return e.toString();

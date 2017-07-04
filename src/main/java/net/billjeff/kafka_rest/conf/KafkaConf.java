@@ -20,6 +20,7 @@ import org.springframework.util.concurrent.SettableListenableFuture;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Configuration for kafka producers and consumers.
@@ -27,6 +28,8 @@ import java.util.Map;
 @Configuration
 @EnableKafka
 public class KafkaConf {
+
+    private static LinkedBlockingQueue<SettableListenableFuture<String>> queue;
 
 	@Bean
 	public ProducerFactory<String, String> producerFactory() {
@@ -51,7 +54,6 @@ public class KafkaConf {
 	@Bean
 	public KafkaTemplate<String, String> template() {
 		KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(producerFactory(), true);
-		// kafkaTemplate.setDefaultTopic(STREAMING_TOPIC1);
 
 		return kafkaTemplate;
 	}
@@ -80,20 +82,25 @@ public class KafkaConf {
 	@Bean
 	public KafkaListenerContainerFactory<ConcurrentMessageListenerContainer<String, String>>
 	kafkaListenerContainerFactory() {
-		ConcurrentKafkaListenerContainerFactory<String, String> factory =
-				new ConcurrentKafkaListenerContainerFactory<>();
-		factory.setConsumerFactory(consumerFactory());
-		return factory;
-	}
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        return factory;
+    }
 
 	@Bean
-	public SettableListenableFuture<String> resultFuture() {
-		return new SettableListenableFuture<>();
-	}
+    public LinkedBlockingQueue<SettableListenableFuture<String>> blockingQueue() {
+	    if (null == queue) {
+	        queue = new LinkedBlockingQueue<>(1);
+        }
+	    return queue;
+    }
 
 	@KafkaListener(topics = "test")
-	public void listener(String payload) {
+	public void listener(String payload) throws InterruptedException {
 		// TODO - Use a limited blocking queue to block the receiver thread in Spring-Kafka
-		resultFuture().set(payload);
+        SettableListenableFuture<String> future = new SettableListenableFuture<>();
+        future.set(payload);
+		queue.put(future);
 	}
 }
