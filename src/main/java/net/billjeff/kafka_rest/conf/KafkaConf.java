@@ -35,6 +35,18 @@ public class KafkaConf {
     @Value("${queue-size}")
     private int queueSize;
 
+    @Value("${kafka-brokers}")
+	private String kafkaBrokers;
+
+    @Value("${kafka-consumer-group}")
+	private String kafkaConsumerGroup;
+
+    @Value("${kafka-auto-reset-offset}")
+    private String kafkaAutoResetOffset;
+
+    @Value("${kafka-topic}")
+    private String kafkaTopic;
+
     private static LinkedBlockingQueue<SettableListenableFuture<String>> queue;
 
 	@Bean
@@ -46,7 +58,7 @@ public class KafkaConf {
 	public Map<String, Object> producerConfigs() {
 		Map<String, Object> props = new HashMap<>();
 
-		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokers);
 		props.put(ProducerConfig.RETRIES_CONFIG, 0);
 		props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
 		props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
@@ -68,14 +80,14 @@ public class KafkaConf {
 	public Map<String, Object> consumerConfigs() {
 		Map<String, Object> props = new HashMap<>();
 
-		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
-		props.put(ConsumerConfig.GROUP_ID_CONFIG, "group");
+		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokers);
+		props.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaConsumerGroup);
 		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
 		props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100");
 		props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 15000);
 		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafkaAutoResetOffset);
 
 		return props;
 	}
@@ -97,15 +109,13 @@ public class KafkaConf {
 	@Bean
     public LinkedBlockingQueue<SettableListenableFuture<String>> blockingQueue() {
 	    if (null == queue) {
-	        System.out.println("queue size: " + queueSize);
 	        queue = new LinkedBlockingQueue<>(queueSize);
         }
 	    return queue;
     }
 
-	@KafkaListener(topics = "test")
+	@KafkaListener(topics = "${kafka-topic}")
 	public void listener(String payload) throws InterruptedException {
-		// TODO - Use a limited blocking queue to block the receiver thread in Spring-Kafka
         SettableListenableFuture<String> future = new SettableListenableFuture<>();
         future.set(payload);
 		queue.put(future);

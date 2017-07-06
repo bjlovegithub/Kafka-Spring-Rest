@@ -6,3 +6,5 @@
 * Support multiple partitions
 * Support configuration for zk / kafka brokers / internal blocking queue size
 * Configure topic / partition / offset through TopicPartition and PartitionOffset annotations.
+* Configure the way to commit the ack to broker
+* Save the records in blocking queue.
